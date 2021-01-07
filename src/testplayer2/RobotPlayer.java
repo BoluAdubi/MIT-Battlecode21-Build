@@ -1,7 +1,7 @@
 package testplayer2;
 import battlecode.common.*;
 
-public strictfp class RobotPlayer2 {
+public strictfp class RobotPlayer {
     static RobotController rc;
 
     static final RobotType[] spawnableRobot = {
@@ -32,7 +32,7 @@ public strictfp class RobotPlayer2 {
 
         // This is the RobotController object. You use it to perform actions from this robot,
         // and to get information on its current status.
-        RobotPlayer2.rc = rc;
+        RobotPlayer.rc = rc;
 
         turnCount = 0;
 
