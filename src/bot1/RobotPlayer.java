@@ -141,4 +141,16 @@ public strictfp class RobotPlayer {
             return true;
         } else return false;
     }
+
+    /*
+     * This function allows a bot to "send" its current location using a flag
+     */
+    static void sendLocation() throws GameActionException {
+        MapLocation location = rc.getLocation();
+        int x = location.x, y = location.y;
+        int encodedLocation = 128 * (x % 128) + (y % 128);
+        if(rc.canSetFlag(encodedLocation)){
+            rc.setFlag(encodedLocation);
+        }
+    }
 }
