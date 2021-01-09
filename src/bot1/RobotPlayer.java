@@ -1,4 +1,4 @@
-package testplayer2;
+package bot1;
 import battlecode.common.*;
 
 public strictfp class RobotPlayer {
@@ -143,14 +143,54 @@ public strictfp class RobotPlayer {
     }
 
     /*
-     * This function allows a bot to "send" its current location using a flag
+     * This function allows a bot to "send" its current location using a binary flag
      */
     static void sendLocation() throws GameActionException {
         MapLocation location = rc.getLocation();
         int x = location.x, y = location.y;
-        int encodedLocation = 128 * (x % 128) + (y % 128);
+        int encodedLocation = 128 * (x % 128) + (y % 128); // binary encoding
         if(rc.canSetFlag(encodedLocation)){
             rc.setFlag(encodedLocation);
         }
+    }
+
+    /*
+     * This function the exact location on the game map from a binary flag
+     */
+    static MapLocation getLocationFromFlag(int flag) {
+        // binary decoding
+        int y = flag % 128;
+        int x = (flag / 128) % 128;
+
+        MapLocation currentLocation = rc.getLocation();
+        // calculations based on the fact that the game maps upper bound is 64x64
+        int offsetx128 = currentLocation.x / 128;
+        int offsety128 = currentLocation.y / 128;
+        MapLocation actualLocation = new MapLocation(offsetx128 * 128 + x, offsety128 * 128 + y);
+
+        /*
+            calculation for actualLocation could be off by +128 or -128 for both coordinates
+            So the next block of code checks if any of the translated locations are closer to the robot
+            if it is, then it is the actual location
+         */
+        MapLocation alternative = actualLocation.translate(-128, 0);
+        if(rc.getLocation().distanceSquaredTo(alternative) < rc.getLocation().distanceSquaredTo(actualLocation)){
+            actualLocation = alternative;
+        }
+        alternative = actualLocation.translate(128, 0);
+        if(rc.getLocation().distanceSquaredTo(alternative) < rc.getLocation().distanceSquaredTo(actualLocation)){
+            actualLocation = alternative;
+        }
+        alternative = actualLocation.translate(0, -128);
+        if(rc.getLocation().distanceSquaredTo(alternative) < rc.getLocation().distanceSquaredTo(actualLocation)){
+            actualLocation = alternative;
+        }
+        alternative = actualLocation.translate(0, 128);
+        if(rc.getLocation().distanceSquaredTo(alternative) < rc.getLocation().distanceSquaredTo(actualLocation)){
+            actualLocation = alternative;
+        }
+
+        return actualLocation;
+
     }
 }
