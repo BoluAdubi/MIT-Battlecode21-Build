@@ -1,4 +1,7 @@
-# Battlecode 2021 Scaffold
+# MIT-Battlecode21-Build
+This is my build entry for MIT's Battlecode21. My bot code can be found in the source folder.
+
+Battlecode Documentation:
 
 This is the Battlecode 2021 scaffold, containing an `examplefuncsplayer`. Read https://2021.battlecode.org/getting-started!
 

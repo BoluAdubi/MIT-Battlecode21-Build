@@ -104,6 +104,7 @@ public strictfp class RobotPlayer {
                     return;
                 }
             }
+            
         }
         if (tryMove(randomDirection()))
             System.out.println("I moved!");
@@ -191,6 +192,5 @@ public strictfp class RobotPlayer {
         }
 
         return actualLocation;
-
     }
 }
