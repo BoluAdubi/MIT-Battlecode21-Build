@@ -1,11 +1,11 @@
 # MIT-Battlecode21-Build
-This is my build entry for MIT's Battlecode21. My bot code can be found in the source folder.
+## This is my build entry for MIT's Battlecode21. My bot code can be found in the source folder.
 
-Battlecode Documentation:
+### Battlecode Documentation:
 
 This is the Battlecode 2021 scaffold, containing an `examplefuncsplayer`. Read https://2021.battlecode.org/getting-started!
 
-### Project Structure
+#### Project Structure
 
 - `README.md`
     This file.
@@ -29,7 +29,7 @@ This is the Battlecode 2021 scaffold, containing an `examplefuncsplayer`. Read h
     Contains files used by the Gradle wrapper scripts. Can be safely ignored.
 
 
-### Useful Commands
+#### Useful Commands
 
 - `./gradlew run`
     Runs a game with the settings in gradle.properties
