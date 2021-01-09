@@ -1,6 +1,9 @@
 package bot1;
 import battlecode.common.*;
 
+import java.awt.*;
+import java.util.ArrayList;
+
 public strictfp class RobotPlayer {
     static RobotController rc;
 
@@ -63,6 +66,53 @@ public strictfp class RobotPlayer {
 
     static void runEnlightenmentCenter() throws GameActionException {
         RobotType toBuild = randomSpawnableRobotType();
+
+        // ArrayList to keep track of robot IDs and flags
+        ArrayList<RobotFlagInfo> RobotStorage = new ArrayList<RobotFlagInfo>();
+
+        //Add EC to RobotStorage
+        RobotFlagInfo EC = new RobotFlagInfo();
+        EC.ID = rc.getID();
+        EC.flag = rc.getFlag(EC.ID);
+        RobotStorage.add(EC);
+
+        // get IDs of robots on my team near EC and store them
+        Team myTeam = rc.getTeam();
+        RobotInfo[] nearbyRobots = rc.senseNearbyRobots();
+        for(int i = 0; i < nearbyRobots.length; i++){
+            boolean isInStorage = false;
+            for(int j = 0; j < RobotStorage.size(); j++) {
+                if(nearbyRobots[i].getID() == RobotStorage.get(j).ID){
+                    isInStorage = true;
+                    break;
+                }
+            }
+            if(!isInStorage && (nearbyRobots[i].getTeam() == myTeam)) {
+                // If ID is not in RobotStorage and robot is on my team, add robot to RobotStorage
+                RobotFlagInfo newRobot = new RobotFlagInfo();
+                newRobot.ID = nearbyRobots[i].getID();
+                newRobot.flag = rc.getFlag(newRobot.ID);
+                RobotStorage.add(newRobot);
+            }
+        }
+
+        // print robotStorage
+        for (int i = 0; i < RobotStorage.size(); i++) {
+            System.out.println(RobotStorage.get(i).ID);
+        }
+
+        // flag communication
+        for(int i = 0; i < RobotStorage.size(); i++){
+            if(rc.canGetFlag(RobotStorage.get(i).ID)){
+                int flag = rc.getFlag(RobotStorage.get(i).ID);
+                if(flag != 0){
+                    rc.setFlag(flag); // If robot flag has changed, set EC flag to robot flag
+                }
+            }else{
+                RobotStorage.remove(i); // if cant get Robot flag, robot is probably dead or converted. Remove
+            }
+        }
+
         int influence = 100;
         for (Direction dir : directions) {
             if (rc.canBuildRobot(toBuild, dir, influence)) {
@@ -104,7 +154,7 @@ public strictfp class RobotPlayer {
                     return;
                 }
             }
-            
+
         }
         if (tryMove(randomDirection()))
             System.out.println("I moved!");
@@ -143,9 +193,18 @@ public strictfp class RobotPlayer {
         } else return false;
     }
 
-    /*
-     * This function allows a bot to "send" its current location using a binary flag
-     */
+    /**
+     * made so Enlightenment Centers can store robot IDs and Flags
+     **/
+    static public class RobotFlagInfo{
+        int ID, flag;
+    }
+
+    /**
+     * Allows a bot to "send" its current location using a binary flag
+     *
+     * @throws GameActionException
+     **/
     static void sendLocation() throws GameActionException {
         MapLocation location = rc.getLocation();
         int x = location.x, y = location.y;
@@ -155,10 +214,14 @@ public strictfp class RobotPlayer {
         }
     }
 
-    /*
-     * This function the exact location on the game map from a binary flag
-     */
-    static MapLocation getLocationFromFlag(int flag) {
+    /**
+     * Gets the exact game map location from a binary flag
+     *
+     * @param flag The flag with an encoded location
+     * @return the MapLocation encoded in the flag
+     * @throws GameActionException
+     **/
+    static MapLocation getLocationFromFlag(int flag) throws GameActionException {
         // binary decoding
         int y = flag % 128;
         int x = (flag / 128) % 128;
