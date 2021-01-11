@@ -1,11 +1,15 @@
 package bot1;
 import battlecode.common.*;
+import java.math.*;
 
 import java.awt.*;
 import java.util.ArrayList;
 
 public strictfp class RobotPlayer {
     static RobotController rc;
+
+    // ArrayList to keep track of robot IDs and flags
+    static ArrayList<RobotFlagInfo> RobotStorage = new ArrayList<RobotFlagInfo>();
 
     static final RobotType[] spawnableRobot = {
         RobotType.POLITICIAN,
@@ -67,38 +71,29 @@ public strictfp class RobotPlayer {
     static void runEnlightenmentCenter() throws GameActionException {
         RobotType toBuild = randomSpawnableRobotType();
 
-        // ArrayList to keep track of robot IDs and flags
-        ArrayList<RobotFlagInfo> RobotStorage = new ArrayList<RobotFlagInfo>();
-
-        //Add EC to RobotStorage
-        RobotFlagInfo EC = new RobotFlagInfo();
-        EC.ID = rc.getID();
-        EC.flag = rc.getFlag(EC.ID);
-        RobotStorage.add(EC);
+        //Add EC to RobotStorage only on first round
+        if(rc.getRoundNum() == 1){
+            RobotFlagInfo EC = new RobotFlagInfo();
+            EC.ID = rc.getID();
+            EC.flag = rc.getFlag(EC.ID);
+            RobotStorage.add(EC);
+        }
 
         // get IDs of robots on my team near EC and store them
         Team myTeam = rc.getTeam();
         RobotInfo[] nearbyRobots = rc.senseNearbyRobots();
+
+        // check if nearby robots are in RobotStorage or not
         for(int i = 0; i < nearbyRobots.length; i++){
-            boolean isInStorage = false;
-            for(int j = 0; j < RobotStorage.size(); j++) {
-                if(nearbyRobots[i].getID() == RobotStorage.get(j).ID){
-                    isInStorage = true;
-                    break;
-                }
-            }
-            if(!isInStorage && (nearbyRobots[i].getTeam() == myTeam)) {
+            boolean isInStorage = isInStorage(nearbyRobots[i]);
+
+            if((!isInStorage) && (nearbyRobots[i].getTeam() == myTeam)) {
                 // If ID is not in RobotStorage and robot is on my team, add robot to RobotStorage
                 RobotFlagInfo newRobot = new RobotFlagInfo();
                 newRobot.ID = nearbyRobots[i].getID();
                 newRobot.flag = rc.getFlag(newRobot.ID);
                 RobotStorage.add(newRobot);
             }
-        }
-
-        // print robotStorage
-        for (int i = 0; i < RobotStorage.size(); i++) {
-            System.out.println(RobotStorage.get(i).ID);
         }
 
         // flag communication
@@ -112,37 +107,184 @@ public strictfp class RobotPlayer {
                 RobotStorage.remove(i); // if cant get Robot flag, robot is probably dead or converted. Remove
             }
         }
+        /*
+        //print RobotStorage
+        for(int i = 0; i < RobotStorage.size(); i++){
+            System.out.println("ID: " + RobotStorage.get(i).ID);
+            System.out.println("Flag: " + RobotStorage.get(i).flag);
+        }
 
-        int influence = 100;
-        for (Direction dir : directions) {
-            if (rc.canBuildRobot(toBuild, dir, influence)) {
-                rc.buildRobot(toBuild, dir, influence);
-            } else {
-                break;
+         */
+        /*
+        if (rc.getInfluence() >= 100) {
+            int slandererInfluence = 100;
+            for (Direction dir : directions) {
+                if (rc.canBuildRobot(RobotType.SLANDERER, dir, slandererInfluence)) {
+                    rc.buildRobot(RobotType.SLANDERER, dir, slandererInfluence);
+                }
             }
         }
+
+         */
+        if(rc.getRoundNum() < 50){
+            int slandererInfluence = 100;
+            for (Direction dir : directions) {
+                if (rc.canBuildRobot(RobotType.SLANDERER, dir, slandererInfluence)) {
+                    rc.buildRobot(RobotType.SLANDERER, dir, slandererInfluence);
+                }
+            }
+        }else{
+            // build random robots in random directions
+            int influence = 10;
+            for (Direction dir : directions) {
+                if(toBuild == RobotType.SLANDERER || toBuild == RobotType.POLITICIAN){
+                    if(rc.canBuildRobot(toBuild, dir, 100))
+                        rc.buildRobot(toBuild, dir, 100);
+                }
+                else if(rc.canBuildRobot(toBuild, dir, influence)) {
+                    rc.buildRobot(toBuild, dir, influence);
+                }
+            }
+        }
+
+        if(rc.getRoundNum() % 50 == 0)
+            rc.setFlag(0);
+
+        // if vote count is less than majority, at the end of every round, bid a fifth of EC influence
+        // as long as influence is over 150
+        int voteCount = rc.getTeamVotes();
+        if(voteCount < 1501){
+            int ECInfluence = rc.getInfluence();
+            if(ECInfluence > 150){
+                if(rc.canBid(ECInfluence / 5))
+                    rc.bid(ECInfluence / 5);
+            }
+        }
+
+        /*
+        // at the end of every round, bid EC.
+        // if team votes are less than the number of rounds, increase amount of EC bid
+        int teamVotes = rc.getTeamVotes();
+        int ECInfluence = rc.getInfluence();
+        double multiplier = 0.1;
+        int bidInfluence = (int) Math.round(ECInfluence * multiplier);
+        if(rc.canBid(bidInfluence))
+            rc.bid(bidInfluence);
+
+         */
     }
 
     static void runPolitician() throws GameActionException {
+        // add EC to RobotStorage
+        RobotFlagInfo EC = new RobotFlagInfo();
+        RobotInfo[] nearbyRobots = rc.senseNearbyRobots();
+
+        for (RobotInfo nearbyRobot : nearbyRobots) {
+            boolean isInStorage = isInStorage(nearbyRobot);
+            if ((nearbyRobot.type == RobotType.ENLIGHTENMENT_CENTER) && !isInStorage) {
+                EC.ID = nearbyRobot.ID;
+                EC.flag = rc.getFlag(EC.ID);
+                RobotStorage.add(EC);
+            }
+        }
+
+        if(RobotStorage.size() > 0 && rc.canGetFlag(RobotStorage.get(0).ID)){
+            EC.ID = RobotStorage.get(0).ID;
+            EC.flag = rc.getFlag(EC.ID);
+        }
+
         Team enemy = rc.getTeam().opponent();
         int actionRadius = rc.getType().actionRadiusSquared;
         RobotInfo[] attackable = rc.senseNearbyRobots(actionRadius, enemy);
-        if (attackable.length == 1 && rc.canEmpower(actionRadius)) {
+        // implement attacking neutral bots
+
+        if (attackable.length != 0 && rc.canEmpower(actionRadius)) {
             System.out.println("empowering...");
             rc.empower(actionRadius);
             System.out.println("empowered");
             return;
         }
+
+
+        // if neutral enlightenment center is found, send location
+        for(RobotInfo robot : rc.senseNearbyRobots(RobotType.POLITICIAN.actionRadiusSquared, Team.NEUTRAL)){
+            sendLocation();
+        }
+        // change flag back to 0 after 50 rounds
+        if(rc.getRoundNum() % 50 == 0)
+            rc.setFlag(0);
+
+
+        if(EC.flag != 0){
+            //rc.setFlag(EC.flag);
+            if(rc.isReady())
+                if(!rc.getLocation().equals(getLocationFromFlag(EC.flag)))
+                    goTo(EC.flag);
+            if(rc.canEmpower(actionRadius))
+                rc.empower(actionRadius);
+        }
+
         if (tryMove(randomDirection()))
             System.out.println("I moved!");
     }
 
     static void runSlanderer() throws GameActionException {
+        // add EC to RobotStorage
+        RobotFlagInfo EC = new RobotFlagInfo();
+        RobotInfo[] nearbyRobots = rc.senseNearbyRobots();
+
+        for (RobotInfo nearbyRobot : nearbyRobots) {
+            boolean isInStorage = isInStorage(nearbyRobot);
+            if ((nearbyRobot.type == RobotType.ENLIGHTENMENT_CENTER) && !isInStorage) {
+                EC.ID = nearbyRobot.ID;
+                EC.flag = rc.getFlag(EC.ID);
+                RobotStorage.add(EC);
+            }
+        }
+
+        if(RobotStorage.size() > 0 && rc.canGetFlag(RobotStorage.get(0).ID)){
+            EC.ID = RobotStorage.get(0).ID;
+            EC.flag = rc.getFlag(EC.ID);
+        }
+
+        //move slanderers to the wall away from enemy team
+        Direction safeDir = Direction.CENTER;
+        if(rc.getTeam() == Team.A)
+            safeDir = Direction.WEST;
+        else
+            safeDir = Direction.EAST;
+
+        if(rc.canMove(safeDir))
+            rc.move(safeDir);
+        else if(!rc.canMove(Direction.EAST) && rc.canMove(Direction.NORTH))
+            rc.move(Direction.NORTH);
+        else if(!rc.canMove(Direction.EAST) && !rc.canMove(Direction.NORTH) && rc.canMove(Direction.SOUTH))
+            rc.move(Direction.SOUTH);
+        /*
         if (tryMove(randomDirection()))
             System.out.println("I moved!");
+
+         */
     }
 
     static void runMuckraker() throws GameActionException {
+//        // add EC to RobotStorage
+//        RobotFlagInfo EC = new RobotFlagInfo();
+//        RobotInfo[] nearbyRobots = rc.senseNearbyRobots();
+//        for(int i = 0; i < nearbyRobots.length; i++){
+//            if(nearbyRobots[i].type == RobotType.ENLIGHTENMENT_CENTER){
+//                EC.ID = nearbyRobots[i].ID;
+//                EC.flag = rc.getFlag(EC.ID);
+//                RobotStorage.add(EC);
+//            }
+//        }
+//
+//        //print RobotStorage
+//        for(int i = 0; i < RobotStorage.size(); i++){
+//            System.out.println("ID: " + RobotStorage.get(i).ID);
+//            System.out.println("Flag: " + RobotStorage.get(i).flag);
+//        }
+
         Team enemy = rc.getTeam().opponent();
         int actionRadius = rc.getType().actionRadiusSquared;
         for (RobotInfo robot : rc.senseNearbyRobots(actionRadius, enemy)) {
@@ -156,6 +298,14 @@ public strictfp class RobotPlayer {
             }
 
         }
+        // if neutral enlightenment center is found, send location
+        for(RobotInfo robot : rc.senseNearbyRobots(RobotType.POLITICIAN.actionRadiusSquared, Team.NEUTRAL)){
+            sendLocation();
+        }
+        // change flag back to 0 after 50 rounds
+        if(rc.getRoundNum() % 50 == 0)
+            rc.setFlag(0);
+
         if (tryMove(randomDirection()))
             System.out.println("I moved!");
         }
@@ -198,6 +348,21 @@ public strictfp class RobotPlayer {
      **/
     static public class RobotFlagInfo{
         int ID, flag;
+    }
+
+    /**
+     *  Checks if given bot is already in RobotStorage
+     *
+     * @param bot bot being checked against RobotStorage
+     * @return inStorage boolean value being returned
+     */
+    static boolean isInStorage(RobotInfo bot){
+        boolean inStorage = false;
+        for(int i = 0; i < RobotStorage.size(); i++){
+            if(bot.ID == RobotStorage.get(i).ID)
+                inStorage = true;
+        }
+        return inStorage;
     }
 
     /**
@@ -255,5 +420,69 @@ public strictfp class RobotPlayer {
         }
 
         return actualLocation;
+    }
+
+    /**
+     * Moves robot to target
+     *
+     * @param flag encoded location
+     * @throws GameActionException
+     */
+    static void goTo(int flag) throws GameActionException{
+        MapLocation target = getLocationFromFlag(flag);
+        MapLocation currentLocation = rc.getLocation();
+
+        if(currentLocation.x < target.x){
+            if(rc.canMove(Direction.EAST))
+                rc.move(Direction.EAST);
+            else if(!rc.canMove(Direction.EAST) && rc.canMove(Direction.NORTH))
+                rc.move(Direction.NORTH);
+            else if(!rc.canMove(Direction.EAST) && !rc.canMove(Direction.NORTH) && rc.canMove(Direction.SOUTH))
+                rc.move(Direction.SOUTH);
+        }
+        else if(currentLocation.x > target.x){
+            if(rc.canMove(Direction.WEST))
+                rc.move(Direction.WEST);
+            else if(!rc.canMove(Direction.EAST) && rc.canMove(Direction.NORTH))
+                rc.move(Direction.NORTH);
+            else if(!rc.canMove(Direction.EAST) && !rc.canMove(Direction.NORTH) && rc.canMove(Direction.SOUTH))
+                rc.move(Direction.SOUTH);
+        }
+        if(currentLocation.y < target.y){
+            if(rc.canMove(Direction.NORTH))
+                rc.move(Direction.NORTH);
+            else if(!rc.canMove(Direction.NORTH) && rc.canMove(Direction.EAST))
+                rc.move(Direction.EAST);
+            else if(!rc.canMove(Direction.NORTH) && !rc.canMove(Direction.EAST) && rc.canMove(Direction.EAST))
+                rc.move(Direction.WEST);
+        }
+        else if(currentLocation.y > target.y){
+            if(rc.canMove(Direction.SOUTH))
+                rc.move(Direction.SOUTH);
+            else if(!rc.canMove(Direction.NORTH) && rc.canMove(Direction.EAST))
+                rc.move(Direction.EAST);
+            else if(!rc.canMove(Direction.NORTH) && !rc.canMove(Direction.EAST) && rc.canMove(Direction.EAST))
+                rc.move(Direction.WEST);
+        }
+
+
+
+        /*
+        if(!rc.getLocation().equals(target)){
+            Direction dirToTarget = rc.getLocation().directionTo(target);
+            if(rc.canMove(dirToTarget)){
+                rc.move(dirToTarget);
+            }else{
+                for (Direction dir : directions) {
+                    if(rc.canMove(dir))
+                        rc.move(dir);
+                }
+            }
+
+            if(rc.getLocation().equals(target))
+                break;
+        }
+
+         */
     }
 }
