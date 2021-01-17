@@ -126,14 +126,15 @@ public strictfp class RobotPlayer {
         }
 
          */
-        if(rc.getRoundNum() < 50){
+        if(rc.getRoundNum() < 50) {
             int slandererInfluence = 100;
             for (Direction dir : directions) {
                 if (rc.canBuildRobot(RobotType.SLANDERER, dir, slandererInfluence)) {
                     rc.buildRobot(RobotType.SLANDERER, dir, slandererInfluence);
                 }
             }
-        }else{
+        }
+        else{
             // build random robots in random directions
             int influence = 10;
             for (Direction dir : directions) {
@@ -143,6 +144,16 @@ public strictfp class RobotPlayer {
                 }
                 else if(rc.canBuildRobot(toBuild, dir, influence)) {
                     rc.buildRobot(toBuild, dir, influence);
+                }
+            }
+        }
+
+        // if EC cannot build robots (surrounded), up voting to a third of influence
+        for(Direction dir : directions){
+            if(!rc.canBuildRobot(toBuild, dir, 0)){
+                int ECInfluence = rc.getInfluence();
+                if(rc.canBid(ECInfluence / 4)){
+                    rc.bid(ECInfluence / 4);
                 }
             }
         }
