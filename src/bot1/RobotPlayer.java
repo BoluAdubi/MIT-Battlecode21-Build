@@ -227,7 +227,6 @@ public strictfp class RobotPlayer {
 
 
         if(EC.flag != 0){
-            //rc.setFlag(EC.flag);
             if(rc.isReady())
                 if(!rc.getLocation().equals(getLocationFromFlag(EC.flag)))
                     goTo(EC.flag);
@@ -355,10 +354,11 @@ public strictfp class RobotPlayer {
     }
 
     /**
-     * made so Enlightenment Centers can store robot IDs and Flags
-     **/
+     *  made so Enlightenment Centers can store robot IDs and Flags
+     */
     static public class RobotFlagInfo{
         int ID, flag;
+        Direction direction;
     }
 
     /**
