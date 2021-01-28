@@ -92,6 +92,8 @@ public strictfp class RobotPlayer {
                 RobotFlagInfo newRobot = new RobotFlagInfo();
                 newRobot.ID = nearbyRobots[i].getID();
                 newRobot.flag = rc.getFlag(newRobot.ID);
+                for (Direction dir : directions)
+                    newRobot.direction = dir;
                 RobotStorage.add(newRobot);
             }
         }
@@ -107,25 +109,14 @@ public strictfp class RobotPlayer {
                 RobotStorage.remove(i); // if cant get Robot flag, robot is probably dead or converted. Remove
             }
         }
-        /*
+
         //print RobotStorage
         for(int i = 0; i < RobotStorage.size(); i++){
             System.out.println("ID: " + RobotStorage.get(i).ID);
             System.out.println("Flag: " + RobotStorage.get(i).flag);
+            System.out.println("Direction: " + RobotStorage.get(i).direction);
         }
 
-         */
-        /*
-        if (rc.getInfluence() >= 100) {
-            int slandererInfluence = 100;
-            for (Direction dir : directions) {
-                if (rc.canBuildRobot(RobotType.SLANDERER, dir, slandererInfluence)) {
-                    rc.buildRobot(RobotType.SLANDERER, dir, slandererInfluence);
-                }
-            }
-        }
-
-         */
         if(rc.getRoundNum() < 50) {
             int slandererInfluence = 100;
             for (Direction dir : directions) {
@@ -148,16 +139,6 @@ public strictfp class RobotPlayer {
             }
         }
 
-        // if EC cannot build robots (surrounded), up voting to a third of influence
-        for(Direction dir : directions){
-            if(!rc.canBuildRobot(toBuild, dir, 0)){
-                int ECInfluence = rc.getInfluence();
-                if(rc.canBid(ECInfluence / 4)){
-                    rc.bid(ECInfluence / 4);
-                }
-            }
-        }
-
         if(rc.getRoundNum() % 50 == 0)
             rc.setFlag(0);
 
@@ -171,18 +152,6 @@ public strictfp class RobotPlayer {
                     rc.bid(ECInfluence / 5);
             }
         }
-
-        /*
-        // at the end of every round, bid EC.
-        // if team votes are less than the number of rounds, increase amount of EC bid
-        int teamVotes = rc.getTeamVotes();
-        int ECInfluence = rc.getInfluence();
-        double multiplier = 0.1;
-        int bidInfluence = (int) Math.round(ECInfluence * multiplier);
-        if(rc.canBid(bidInfluence))
-            rc.bid(bidInfluence);
-
-         */
     }
 
     static void runPolitician() throws GameActionException {
@@ -234,8 +203,19 @@ public strictfp class RobotPlayer {
                 rc.empower(actionRadius);
         }
 
-        if (tryMove(randomDirection()))
-            System.out.println("I moved!");
+        // get Direction bot was spawned in
+        Direction rcDir = Direction.CENTER;
+
+        for(int i = 0; i < RobotStorage.size(); i++){
+            if(RobotStorage.get(i).ID == rc.getID()){
+                rcDir = RobotStorage.get(i).direction;
+            }
+        }
+        System.out.println("direction: " + rcDir);
+
+        // move bot in direction spawned
+        tryMove(rcDir);
+
     }
 
     static void runSlanderer() throws GameActionException {
@@ -270,30 +250,9 @@ public strictfp class RobotPlayer {
             rc.move(Direction.NORTH);
         else if(!rc.canMove(Direction.EAST) && !rc.canMove(Direction.NORTH) && rc.canMove(Direction.SOUTH))
             rc.move(Direction.SOUTH);
-        /*
-        if (tryMove(randomDirection()))
-            System.out.println("I moved!");
-
-         */
     }
 
     static void runMuckraker() throws GameActionException {
-//        // add EC to RobotStorage
-//        RobotFlagInfo EC = new RobotFlagInfo();
-//        RobotInfo[] nearbyRobots = rc.senseNearbyRobots();
-//        for(int i = 0; i < nearbyRobots.length; i++){
-//            if(nearbyRobots[i].type == RobotType.ENLIGHTENMENT_CENTER){
-//                EC.ID = nearbyRobots[i].ID;
-//                EC.flag = rc.getFlag(EC.ID);
-//                RobotStorage.add(EC);
-//            }
-//        }
-//
-//        //print RobotStorage
-//        for(int i = 0; i < RobotStorage.size(); i++){
-//            System.out.println("ID: " + RobotStorage.get(i).ID);
-//            System.out.println("Flag: " + RobotStorage.get(i).flag);
-//        }
 
         Team enemy = rc.getTeam().opponent();
         int actionRadius = rc.getType().actionRadiusSquared;
@@ -475,25 +434,6 @@ public strictfp class RobotPlayer {
             else if(!rc.canMove(Direction.NORTH) && !rc.canMove(Direction.EAST) && rc.canMove(Direction.EAST))
                 rc.move(Direction.WEST);
         }
-
-
-
-        /*
-        if(!rc.getLocation().equals(target)){
-            Direction dirToTarget = rc.getLocation().directionTo(target);
-            if(rc.canMove(dirToTarget)){
-                rc.move(dirToTarget);
-            }else{
-                for (Direction dir : directions) {
-                    if(rc.canMove(dir))
-                        rc.move(dir);
-                }
-            }
-
-            if(rc.getLocation().equals(target))
-                break;
-        }
-
-         */
+        
     }
 }
